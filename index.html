@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار TOFAS - مستر روبوت</title>
+    <style>
+        :root {
+            --bg-fresh: #e0f7fa; /* لون منعش */
+            --primary: #0277bd;
+            --accent: #ffb300;
+            --white: #ffffff;
+            --danger: #e53935;
+            --success: #43a047;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-fresh);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .quiz-card {
+            background: var(--white);
+            max-width: 700px;
+            width: 100%;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 2px solid #b3e5fc;
+        }
+
+        /* Header Section */
+        .brand-section {
+            text-align: center;
+            padding: 15px;
+            background: #fff;
+        }
+
+        .logo {
+            width: 120px; /* تصغير اللوجو للنصف */
+            height: auto;
+        }
+
+        .academy-name {
+            font-weight: bold;
+            font-size: 1.4rem;
+            color: var(--primary);
+            margin-top: 5px;
+        }
+
+        /* Question Section */
+        .content { padding: 25px; }
+
+        .code-block {
+            background: #263238;
+            color: #ffecb3;
+            padding: 15px;
+            border-radius: 8px;
+            direction: ltr;
+            text-align: left;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+
+        .option-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 2px solid #e1f5fe;
+            border-radius: 10px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.2s;
+            text-align: right;
+        }
+
+        .option-btn:hover:not(:disabled) { background: #f1f8ff; border-color: var(--primary); }
+        .correct { background: var(--success) !important; color: white; border-color: var(--success); }
+        .wrong { background: var(--danger) !important; color: white; border-color: var(--danger); }
+
+        /* Timer and Info */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background: #f1f8ff;
+            font-weight: bold;
+        }
+
+        #hint-display {
+            color: #d84315;
+            background: #fff3e0;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+            border-right: 5px solid var(--accent);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background: #fafafa;
+        }
+
+        button.nav {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-blue { background: var(--primary); color: white; }
+        .btn-warn { background: var(--accent); color: white; }
+        .btn-reveal { background: #546e7a; color: white; font-size: 12px; }
+
+        .footer {
+            background: var(--primary);
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-card" id="app">
+    <div id="start-screen" style="text-align: center; padding: 50px;">
+        <img src="logo.png" class="logo">
+        <div class="academy-name">أكاديمية مستر روبوت</div>
+        <p>مرحباً بك في محاكاة اختبار توفاس (أولى ثانوي)</p>
+        <input type="text" id="student-name" placeholder="ادخل اسمك بالكامل" style="padding: 12px; width: 80%; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 20px;">
+        <br>
+        <button class="nav btn-blue" onclick="initQuiz()">ابدأ الاختبار الآن</button>
+    </div>
+
+    <div id="quiz-screen" style="display: none;">
+        <div class="brand-section">
+            <img src="logo.png" class="logo">
+            <div class="academy-name">أكاديمية مستر روبوت</div>
+        </div>
+        
+        <div class="status-bar">
+            <span id="q-progress">السؤال: 1 / 30</span>
+            <span id="timer">الزمن: 00:00</span>
+        </div>
+
+        <div class="content">
+            <div id="q-text" style="font-size: 1.2rem; font-weight: bold;"></div>
+            <div id="q-code" class="code-block" style="display: none;"></div>
+            <div id="hint-display"></div>
+            <div id="options-area" style="margin-top: 20px;"></div>
+            <div id="success-msg" style="color: var(--success); font-weight: bold; text-align: center;"></div>
+        </div>
+
+        <div class="controls">
+            <button class="nav" style="background:#ccc" onclick="prevQ()">السابق</button>
+            <button class="nav btn-warn" onclick="skipQ()">تخطي</button>
+            <button class="nav btn-reveal" onclick="forceReveal()">كشف الإجابة (-2)</button>
+            <button class="nav btn-blue" onclick="nextQ()">التالي</button>
+        </div>
+    </div>
+
+    <div id="result-screen" style="display: none; text-align: center; padding: 40px;">
+        <h2 style="color: var(--primary);">نتيجة الاختبار النهائية</h2>
+        <div id="summary-data" style="font-size: 1.1rem; border: 2px dashed var(--primary); padding: 20px; border-radius: 15px;"></div>
+        <p id="motivate" style="font-size: 1.3rem; margin-top: 20px;"></p>
+        <button class="nav btn-blue" onclick="location.reload()">إعادة المحاولة</button>
+    </div>
+
+    <div class="footer">
+        مدير الأكاديمية: م/ اندرو مجدي | 01285529570
+    </div>
+</div>
+
+<script>
+    // الأسئلة بناءً على المذكرة
+const questions = [
+   // أسئلة حول العناوين والفقرات (HTML Basics)
+{ 
+  q: "أي وسم سيظهر النص بأكبر حجم؟", 
+  code: "<h1>Cody's Notepad</h1>\n<h3>Cody's Notepad</h3>\n<h6>Cody's Notepad</h6>", 
+  a: ["<h1>", "<h3>", "<h6>", "كلهم نفس الحجم"], 
+  c: 0, 
+  h: "كلما صغر الرقم بجانب h زاد حجم الخط" 
+},
+
+// أسئلة حول القوائم (Lists)
+{ 
+  q: "ما هو نوع القائمة المستخدمة لعرض المواد الدراسية؟", 
+  code: "<ol>\n  <li>Science</li>\n  <li>Math</li>\n</ol>", 
+  a: ["قائمة غير مرتبة (نقطية)", "قائمة مرتبة (رقمية)", "فقرة عادية", "رابط تشعبي"], 
+  c: 1, 
+  h: "ol ترمز لـ Ordered List" 
+},
+
+// أسئلة حول الصور والروابط
+{ 
+  q: "في وسم الصورة، ماذا يمثل الاختصار alt؟", 
+  code: "<img src='pasta.png' alt='Tomato sauce pasta'>", 
+  a: ["رابط الصورة", "حجم الصورة", "النص البديل عند عدم ظهور الصورة", "عنوان الصفحة"], 
+  c: 2, 
+  h: "Alternative Text" 
+},
+
+// أسئلة حول التعليقات (Comments)
+{ 
+  q: "هل سيظهر هذا النص للمستخدم في المتصفح؟", 
+  code: "", 
+  a: ["نعم، كعنوان", "نعم، كفقرة", "لا، لأنه تعليق برمي", "يظهر كخطأ"], 
+  c: 2, 
+  h: "التعليقات تبدأ بـ " 
+},
+
+// أسئلة حول تنسيق العناصر (Formatting)
+{ 
+  q: "ما وظيفة الوسم <br> في قائمة المشتريات؟", 
+  code: "<p>Bread<br>Ham<br>Cheese</p>", 
+  a: ["جعل الخط عريضاً", "إضافة سطر جديد", "تغيير لون النص", "حذف الكلمة"], 
+  c: 1, 
+  h: "br تعني Line Break" 
+},
+
+// سؤال حول بنية القوائم المتداخلة
+{ 
+  q: "ما الناتج الصحيح لوسم <li> داخل <ul>؟", 
+  code: "<ul>\n  <li>Tomato</li>\n</ul>", 
+  a: ["رقم 1 ثم Tomato", "نقطة (Bullet) ثم Tomato", "نص Tomato غليظ", "Tomato تحتها خط"], 
+  c: 1, 
+  h: "ul تعني قائمة نقطية" 
+},
+// أسئلة حول تضارب الخصائص (CSS Cascading)
+{ 
+  q: "ما هو لون النص النهائي للوسم h1؟", 
+  code: "h1 { color: red; }\nh1 { color: blue; }", 
+  a: ["أحمر", "أزرق", "بنفسجي", "أسود"], 
+  c: 1, 
+  h: "المتصفح ينفذ آخر خاصية تمت كتابتها (القاعدة الأخيرة)" 
+},
+
+// أسئلة حول الفئات (Classes)
+{ 
+  q: "ما هو لون النص في الجملة الأولى (Let's go to the sea)؟", 
+  code: ".sea { color: blue; }\n.mountains { color: green; }", 
+  a: ["أخضر", "أسود", "أزرق", "شفاف"], 
+  c: 2, 
+  h: "النقطة (.) تعني أننا نستهدف الكلاس المسمى sea" 
+},
+
+// أسئلة حول سمك الخط (Font Weight)
+{ 
+  q: "ما الناتج النهائي لشكل الخط في الفقرة p؟", 
+  code: "p { font-weight: bold; }\np { font-weight: normal; }", 
+  a: ["عريض جداً", "عريض (Bold)", "عادي (Normal)", "مائل"], 
+  c: 2, 
+  h: "الخاصية الأخيرة normal تلغي ما قبلها" 
+},
+
+// أسئلة حول حجم الخط (Font Size)
+{ 
+  q: "أي كود سيجعل حجم الخط أكبر؟", 
+  code: "A: font-size: 10px;\nB: font-size: 50px;", 
+  a: ["A", "B", "كلاهما متساويان", "لا أحد منهما"], 
+  c: 1, 
+  h: "كلما زاد رقم الـ px زاد حجم الخط" 
+},
+
+// أسئلة حول التعليقات في CSS
+{ 
+  q: "ماذا يفعل هذا الكود في الصفحة؟\n/* Change the color of the text of the h1 tag to red. */", 
+  code: "/* Change the color... */", 
+  a: ["يغير اللون للأحمر", "يحذف الـ h1", "لا يفعل شيء (مجرد ملاحظة)", "يظهر رسالة خطأ"], 
+  c: 2, 
+  h: "هذا تعليق CSS لا يراه المستخدم ولا ينفذه المتصفح" 
+},
+
+// أسئلة حول قيم font-weight الرقمية
+{ 
+  q: "ماذا يعني الرقم 900 في خاصية font-weight؟", 
+  code: "p { font-weight: 900; }", 
+  a: ["خط خفيف جداً", "خط عريض جداً", "حجم الخط 900 بكسل", "شفافية الخط"], 
+  c: 1, 
+  h: "الأرقام الكبيرة (مثل 700 و 900) تعني خطاً عريضاً" 
+},
+// --- Conditionals (If/Else) ---
+{ 
+  q: "ما الناتج الذي سيظهر في الكونسول؟", 
+  code: "let science = 80;\nif (science == 100) {\n  console.log('steak');\n} else if (science >= 80) {\n  console.log('ice cream');\n}", 
+  a: ["steak", "ice cream", "No games", "Error"], 
+  c: 1, 
+  h: "80 ليست 100، لكنها أكبر من أو تساوي 80" 
+},
+
+// --- Logical Operators (OR) ---
+{ 
+  q: "إذا كانت numberOfPeople تساوي 5 و total تساوي 15000، ما نتيجة الشرط؟", 
+  code: "numberOfPeople >= 10 || total >= 12000", 
+  a: ["true", "false", "undefined", "Error"], 
+  c: 0, 
+  h: "في علامة (||) يكفي أن يكون طرف واحد صحيحاً ليكون الناتج true" 
+},
+
+// --- Logical Operators (AND) ---
+{ 
+  q: "ما نتيجة هذا الشرط؟", 
+  code: "let n = 3, t = 3000;\n(n >= 3 && t == 3333)", 
+  a: ["true", "false", "NaN", "Error"], 
+  c: 1, 
+  h: "في علامة (&&) يجب أن يكون الطرفين صحيحين معاً" 
+},
+
+// --- Scope (Variable Visibility) ---
+{ 
+  q: "ماذا سيحدث عند تنفيذ هذا الكود؟", 
+  code: "let contest = 1;\nif (contest == 1) {\n  let reward = 30000;\n}\nconsole.log(reward);", 
+  a: ["30000", "undefined", "Error (ReferenceError)", "null"], 
+  c: 2, 
+  h: "المتغير reward تم تعريفه بـ let داخل القوسين، فلا يمكن رؤيته خارجهما" 
+},
+
+// --- Scope in Else ---
+{ 
+  q: "ما الناتج هنا؟", 
+  code: "let contest = 5;\nif (contest == 1) {\n  let reward = 30000;\n} else {\n  console.log('on hold');\n}", 
+  a: ["30000 codycoins", "on hold", "Error", "لا شيء"], 
+  c: 1, 
+  h: "بما أن 5 لا تساوي 1، سينتقل الكود مباشرة للجزء else" 
+},
+
+// --- Nested If (Success Case) ---
+{ 
+  q: "ماذا سيطبع الكود في الكونسول؟", 
+  code: "let score = 90, rank = 1;\nif (score >= 80) {\n  console.log('Passed');\n  if (rank == 1) { console.log('Trophy'); }\n}", 
+  a: ["Passed", "Trophy", "Passed و Trophy", "Error"], 
+  c: 2, 
+  h: "كلا الشرطين (الخارجي والداخلي) محققان" 
+},
+
+// --- Nested If (Inner Fail) ---
+{ 
+  q: "ما الناتج إذا كان الترتيب (rank) هو 3؟", 
+  code: "let score = 90, rank = 3;\nif (score >= 80) {\n  console.log('Passed');\n  if (rank == 1) { console.log('Trophy'); }\n}", 
+  a: ["Passed فقط", "Trophy فقط", "Passed و Trophy", "لا شيء"], 
+  c: 0, 
+  h: "الشرط الأول صح (Passed)، لكن الشرط الثاني (rank == 1) خطأ" 
+},
+
+// --- Nested If (Outer Fail) ---
+{ 
+  q: "ما الناتج إذا كان السكور 75 والترتيب 1؟", 
+  code: "let score = 75, rank = 1;\nif (score >= 80) {\n  console.log('Passed');\n  if (rank == 1) { console.log('Trophy'); }\n}", 
+  a: ["Passed", "Trophy", "Passed و Trophy", "لا شيء سيطبع"], 
+  c: 3, 
+  h: "بما أن الشرط الخارجي (score >= 80) خطأ، لن يتم الدخول للقوسين أصلاً" 
+},
+
+// --- Nested If (Practical Example) ---
+{ 
+  q: "ما الناتج؟", 
+  code: "let rank = 1, fish = 27;\nif (rank == 1) {\n  console.log('Champ');\n  if (fish >= 30) { console.log('Record'); }\n}", 
+  a: ["Champ", "Record", "Champ و Record", "Error"], 
+  c: 0, 
+  h: "رتبته الأول (Champ)، لكن عدد السمك 27 (أقل من 30) فلا يوجد Record" 
+},
+
+// --- Logical Comparison ---
+{ 
+  q: "ما هي القيمة المخزنة في المتغير contest؟", 
+  code: "let contest = 1;\nif (contest == 5) { contest = 10; }", 
+  a: ["1", "5", "10", "Error"], 
+  c: 0, 
+  h: "الشرط لم يتحقق (1 لا تساوي 5)، لذا قيمة المتغير لم تتغير" 
+},
+// --- For Loops Basics ---
+{ 
+  q: "كم مرة ستطبع الجملة في الكونسول؟", 
+  code: "for (let i = 0; i < 3; i++) {\n  console.log('She sells seashells...');\n}", 
+  a: ["مرتين", "3 مرات", "4 مرات", "لن تطبع شيئاً"], 
+  c: 1, 
+  h: "الدورة تبدأ من 0 وتنتهي عند 2 (0, 1, 2)" 
+},
+
+// --- Loop Values ---
+{ 
+  q: "ما هي الأرقام التي سيتم طباعتها بالترتيب؟", 
+  code: "for (let i = 0; i < 3; i++) {\n  console.log(i);\n}", 
+  a: ["1, 2, 3", "0, 1, 2, 3", "0, 1, 2", "3, 2, 1"], 
+  c: 2, 
+  h: "تبدأ i من 0 وتتوقف قبل أن تصل إلى 3" 
+},
+
+// --- Loop Scope Error ---
+{ 
+  q: "ما الناتج المتوقع للسطر الأخير في هذا الكود؟", 
+  code: "for (let i = 0; i < 3; i++) {\n  console.log(i);\n}\nconsole.log(i);", 
+  a: ["3", "2", "0", "خطأ (ReferenceError)"], 
+  c: 3, 
+  h: "المتغير i المعرف بـ let داخل الحلقة لا يمكن الوصول إليه خارجها" 
+},
+
+// --- Logic Inside Loops ---
+{ 
+  q: "كم مرة ستظهر كلمة 'running' في الكونسول؟", 
+  code: "for (let i = 0; i < 5; i++) {\n  console.log('sit-up');\n  if (i == 2) { console.log('running'); }\n}", 
+  a: ["مرة واحدة", "مرتين", "5 مرات", "ولا مرة"], 
+  c: 0, 
+  h: "كلمة running تظهر فقط عندما تكون قيمة i تساوي 2" 
+},
+
+// --- Logic Inside Loops 2 ---
+{ 
+  q: "في الكود السابق، كم مرة ستظهر كلمة 'sit-up'؟", 
+  code: "for (let i = 0; i < 5; i++) {\n  console.log('sit-up');\n  if (i == 2) { console.log('running'); }\n}", 
+  a: ["1", "2", "5", "3"], 
+  c: 2, 
+  h: "sit-up موجودة داخل الحلقة مباشرة، لذا تتكرر مع كل دورة" 
+},
+
+// --- Specific Condition ---
+{ 
+  q: "عند أي دورة (قيمة i) سيتم طباعة كلمة 'fruit'؟", 
+  code: "for (let i = 0; i < 5; i++) {\n  console.log('lunch box');\n  if (i == 3) { console.log('fruit'); }\n}", 
+  a: ["الدورة الأولى (0)", "الدورة الثالثة (2)", "الدورة الرابعة (3)", "الدورة الخامسة (4)"], 
+  c: 2, 
+  h: "الشرط يتحقق عندما تكون i تساوي 3" 
+},
+
+// --- Compound Assignment (+=) ---
+{ 
+  q: "ما هي قيمة i النهائية بعد تنفيذ الكود؟", 
+  code: "let i = 0;\ni += 3;", 
+  a: ["0", "3", "30", "خطأ"], 
+  c: 1, 
+  h: "i += 3 تعني i = i + 3" 
+},
+
+// --- Accumulation ---
+{ 
+  q: "ما الناتج؟", 
+  code: "let num = 0;\nnum += 5;\nnum += 5;", 
+  a: ["0", "5", "10", "55"], 
+  c: 2, 
+  h: "نضيف 5 في كل مرة على القيمة السابقة" 
+},
+
+// --- Loop Increments ---
+{ 
+  q: "ماذا سيحدث لو قمنا بتغيير i++ إلى i += 2 في حلقة من 0 إلى 4؟", 
+  code: "for (let i = 0; i < 4; i += 2) { console.log(i); }", 
+  a: ["تطبع 0, 1, 2, 3", "تطبع 0, 2", "تطبع 0, 2, 4", "خطأ برمي"], 
+  c: 1, 
+  h: "العداد سيزيد بمقدار 2 في كل خطوة" 
+},
+
+// --- Identifying Operators ---
+{ 
+  q: "ما المعنى البرمجي لـ 'i += 1'؟", 
+  code: "i += 1;", 
+  a: ["i أصغر من 1", "i تساوي 1", "زيادة قيمة i بواحد", "نقص قيمة i بواحد"], 
+  c: 2, 
+  h: "هذا اختصار لعملية الجمع والتعيين" 
+},
+// --- Function Execution ---
+{ 
+  q: "ما الناتج الذي سيظهر في الكونسول عند تنفيذ الكود؟", 
+  code: "function split5(total) {\n  let per = total / 5;\n  return per;\n}\nconsole.log(split5(6250));", 
+  a: ["1000", "1250", "6250", "Error"], 
+  c: 1, 
+  h: "قسمة 6250 على 5" 
+},
+
+// --- Parameters & Math ---
+{ 
+  q: "ما هو الكود الذي يخرج القيمة 10 في الكونسول؟", 
+  code: "function divide6(total) {\n  let per = total / 6;\n  return per;\n}", 
+  a: ["divide6(6);", "divide6(36);", "console.log(divide6(60));", "console.log(divide6(10));"], 
+  c: 2, 
+  h: "نحتاج لدالة تقسم الرقم على 6 ليعطينا 10" 
+},
+
+// --- Multiple Parameters ---
+{ 
+  q: "ما الناتج النهائي لهذا الكود؟", 
+  code: "function sum(num1, num2) {\n  let result = num1 + num2;\n  return result;\n}\nconsole.log(sum(50, 100));", 
+  a: ["50", "100", "150", "50100"], 
+  c: 2, 
+  h: "الدالة تجمع المعامل الأول مع المعامل الثاني" 
+},
+
+// --- String Return ---
+{ 
+  q: "ماذا سيطبع هذا الكود؟", 
+  code: "function goodMorning() {\n  let greeting = 'Good morning!';\n  return greeting;\n}\nconsole.log(goodMorning());", 
+  a: ["greeting", "Good morning!", "undefined", "Error"], 
+  c: 1, 
+  h: "الدالة تعيد قيمة المتغير المخزن بداخلها" 
+},
+
+// --- Scope in Functions ---
+{ 
+  q: "ماذا سيحدث عند محاولة الوصول للمتغير result خارج الدالة؟", 
+  code: "function split5(total) {\n  let result = total / 5;\n  return result;\n}\nconsole.log(result);", 
+  a: ["6250", "1250", "Error (ReferenceError)", "null"], 
+  c: 2, 
+  h: "المتغيرات المعرفة داخل الدالة لا يمكن رؤيتها خارجها" 
+},
+
+// --- Identifying the Correct Call ---
+{ 
+  q: "ما الكود الصحيح لطباعة كلمة 'Good morning!'؟", 
+  code: "function goodMorning() { return 'Good morning!'; }", 
+  a: ["goodMorning;", "call goodMorning();", "console.log(goodMorning());", "print(goodMorning);"], 
+  c: 2, 
+  h: "يجب استخدام console.log لطباعة القيمة المسترجعة" 
+},
+
+// --- Missing Return ---
+{ 
+  q: "ما الناتج إذا استدعينا الدالة بدون كلمة return؟", 
+  code: "function sum(a, b) {\n  let res = a + b;\n}\nconsole.log(sum(5, 5));", 
+  a: ["10", "0", "undefined", "Error"], 
+  c: 2, 
+  h: "إذا لم نستخدم return، تعيد الدالة تلقائياً قيمة غير محددة" 
+},
+
+// --- Function Logic ---
+{ 
+  q: "ما ناتج تنفيذ divide6(12) + split5(10)؟", 
+  code: "function divide6(t) { return t/6; }\nfunction split5(t) { return t/5; }", 
+  a: ["2", "4", "22", "1210"], 
+  c: 1, 
+  h: "(12 ÷ 6) + (10 ÷ 5) = 2 + 2" 
+},
+
+// --- Parameter Passing ---
+{ 
+  q: "أي كود يمثل الاستدعاء الصحيح للدالة لجمع الرقمين 10 و 20؟", 
+  code: "function sum(num1, num2) { return num1 + num2; }", 
+  a: ["sum(10+20);", "sum(10, 20);", "sum(10:20);", "sum 10, 20;"], 
+  c: 1, 
+  h: "نمرر المعاملات بين القوسين ونفصل بينها بفاصلة" 
+},
+
+// --- Final Result Analysis ---
+{ 
+  q: "ما هو ناتج console.log(sum(split5(25), 5))؟", 
+  code: "function split5(n) { return n/5; }\nfunction sum(a, b) { return a+b; }", 
+  a: ["5", "10", "25", "30"], 
+  c: 1, 
+  h: "قسمة 25 على 5 تساوي 5، ثم جمع 5 مع 5 يساوي 10" 
+},
+// --- السؤال 1: تكرار عملية ثابتة ---
+{ 
+  q: "ما الناتج المتكرر في الكونسول 5 مرات؟", 
+  code: "for (let i = 0; i < 5; i++) {\n  console.log(2 * 2);\n}", 
+  a: ["4", "2", "20", "8"], 
+  c: 0, 
+  h: "الحلقة تكرر طباعة ناتج 2*2 في كل دورة" 
+},
+
+// --- السؤال 2: التراكم خارج الحلقة ---
+{ 
+  q: "ما القيمة النهائية التي سيتم طباعتها لـ num؟", 
+  code: "let num = 1;\nfor (let i = 0; i < 5; i++) {\n  num = num * 2;\n}\nconsole.log(num);", 
+  a: ["10", "16", "32", "64"], 
+  c: 2, 
+  h: "بدأنا بـ 1 وضربناها في 2 لخمس مرات (2^5)" 
+},
+
+// --- السؤال 3: التتبع داخل الحلقة ---
+{ 
+  q: "ما هي أول قيمة سيتم طباعتها داخل الحلقة؟", 
+  code: "let num = 1;\nfor (let i = 0; i < 5; i++) {\n  num = num * 2;\n  console.log(num);\n}", 
+  a: ["1", "2", "4", "0"], 
+  c: 1, 
+  h: "في أول دورة num = 1 * 2 ثم تتم الطباعة فوراً" 
+},
+
+// --- السؤال 4: قوة العدد 4 ---
+{ 
+  q: "ما الناتج النهائي لهذا الكود؟", 
+  code: "let num = 1;\nfor(let i = 0; i < 4; i++){\n  num = num * 4;\n}\nconsole.log(num);", 
+  a: ["16", "64", "256", "1024"], 
+  c: 2, 
+  h: "العملية هي 4 مضروبة في نفسها 4 مرات (4 * 4 * 4 * 4)" 
+},
+
+// --- السؤال 5: تتبع العداد i ---
+{ 
+  q: "ما الناتج النهائي (Factorial 5)؟", 
+  code: "let num = 1;\nfor (let i = 1; i <= 5; i++) {\n  num = num * i;\n}\nconsole.log(num);", 
+  a: ["15", "25", "120", "150"], 
+  c: 2, 
+  h: "العملية هي ضرب 1*2*3*4*5" 
+},
+
+// --- السؤال 6: حدود العداد i ---
+{ 
+  q: "ما القيمة النهائية لـ num إذا كان العداد يبدأ من 1 وينتهي عند 3؟", 
+  code: "let num = 1;\nfor (let i = 1; i <= 3; i++) {\n  num = num * 4;\n}\nconsole.log(num);", 
+  a: ["4", "16", "64", "12"], 
+  c: 2, 
+  h: "ستنفذ الحلقة 3 مرات (1, 2, 3) وفي كل مرة نضرب في 4" 
+},
+
+// --- السؤال 7: الضرب في 10 ---
+{ 
+  q: "ما الناتج النهائي لهذا الكود؟", 
+  code: "let num = 1;\nfor (let i = 1; i <= 2; i++) {\n  num = num * 10;\n}\nconsole.log(num);", 
+  a: ["10", "20", "100", "1000"], 
+  c: 2, 
+  h: "ضربنا 1 في 10 مرتين" 
+},
+
+// --- السؤال 8: تأثير الضرب في صفر ---
+{ 
+  q: "ما الناتج إذا بدأ العداد i من 0 في عملية المضروب؟", 
+  code: "let num = 1;\nfor (let i = 0; i <= 5; i++) {\n  num = num * i;\n}\nconsole.log(num);", 
+  a: ["120", "0", "5", "1"], 
+  c: 1, 
+  h: "أي رقم يضرب في 0 يكون الناتج 0" 
+},
+
+// --- السؤال 9: عدد الدورات ---
+{ 
+  q: "كم مرة سيتم تنفيذ عملية الضرب داخل هذه الحلقة؟", 
+  code: "let num = 1;\nfor (let i = 1; i <= 10; i++) {\n  num = num * i;\n}", 
+  a: ["9 مرات", "10 مرات", "11 مرة", "مره واحدة"], 
+  c: 1, 
+  h: "العداد يبدأ من 1 ويشمل الرقم 10 (<=)" 
+},
+
+// --- السؤال 10: الجمع التراكمي بدلاً من الضرب ---
+{ 
+  q: "ما الناتج النهائي إذا استخدمنا الجمع (+) بدلاً من الضرب؟", 
+  code: "let num = 0;\nfor (let i = 1; i <= 4; i++) {\n  num = num + i;\n}\nconsole.log(num);", 
+  a: ["4", "10", "6", "16"], 
+  c: 1, 
+  h: "العملية هي 0 + 1 + 2 + 3 + 4" 
+},
+// --- السؤال 1: الوصول لعنصر محدد ---
+{ 
+  q: "ما الكود الذي سيخرج القيمة 36.3 من المصفوفة؟", 
+  code: "let tempList = [36.2, 36.5, 36.3, 36.8, 36.4];", 
+  a: ["console.log(tempList[3]);", "console.log(tempList[2]);", "console.log(tempList[1]);", "console.log(tempList[36.3]);"], 
+  c: 1, 
+  h: "تذكر أن العد يبدأ من 0 (0, 1, 2...)" 
+},
+
+// --- السؤال 2: الوصول للعنصر الرابع ---
+{ 
+  q: "ماذا سيخرج الكود التالي في الكونسول؟", 
+  code: "let tempList = [36.2, 36.5, 36.3, 36.8, 36.4];\nconsole.log(tempList[3]);", 
+  a: ["36.3", "36.8", "36.4", "36.5"], 
+  c: 1, 
+  h: "العنصر في الحانة رقم 3 هو العنصر الرابع في الترتيب" 
+},
+
+// --- السؤال 3: طول المصفوفة ---
+{ 
+  q: "ما الكود الذي يطبع عدد العناصر الإجمالي داخل المصفوفة؟", 
+  code: "let tempList = [36.0, 36.5, 36.3, 36.8];", 
+  a: ["console.log(tempList.size);", "console.log(tempList.count);", "console.log(tempList.length);", "console.log(tempList[length]);"], 
+  c: 2, 
+  h: "نستخدم خاصية length لمعرفة طول المصفوفة" 
+},
+
+// --- السؤال 4: حساب المجموع ---
+{ 
+  q: "ما الكود الذي يجمع جميع عناصر مصفوفة مكونة من 7 عناصر؟", 
+  code: "let tempList = [36.2, 36.5, 36.3, 36.8, 36.4, 36.9, 36.6];\nlet sum = 0;", 
+  a: ["for (let i = 0; i <= 7; i++) { sum += tempList; }", "for (let i = 0; i < 7; i++) { sum += tempList[i]; }", "sum = tempList[0] + tempList[7];", "sum = tempList.sum();"], 
+  c: 1, 
+  h: "يجب المرور على كل عنصر باستخدام i وإضافته للمتغير sum" 
+},
+
+// --- السؤال 5: حساب المتوسط الحسابي ---
+{ 
+  q: "ما الكود الذي يطبع متوسط درجات الحرارة لـ 14 يوماً؟", 
+  code: "let sum = 511; // مجموع الـ 14 عنصر", 
+  a: ["console.log(sum * 14);", "console.log(sum / 13);", "console.log(sum / 14);", "console.log(sum % 14);"], 
+  c: 2, 
+  h: "المتوسط = المجموع ÷ عدد العناصر" 
+},
+
+// --- السؤال 6: المتوسط باستخدام length ---
+{ 
+  q: "ما الكود الذي يخرج المتوسط الحسابي بغض النظر عن حجم المصفوفة؟", 
+  code: "let sum = 100;\nlet list = [10, 20, 30, 40];", 
+  a: ["console.log(sum / 4);", "console.log(sum / list.length);", "console.log(list / sum);", "console.log(sum.length);"], 
+  c: 1, 
+  h: "استخدام list.length يجعل الكود مرناً لأي عدد من العناصر" 
+},
+
+// --- السؤال 7: البحث عن قيم مرتفعة ---
+{ 
+  q: "ما الكود الذي يطبع 'Be careful!' فقط إذا كانت الحرارة 37.0 أو أكثر؟", 
+  code: "let tempList = [36.5, 37.2, 36.8];", 
+  a: ["if (tempList >= 37.0) { ... }", "for (i=0; i<3; i++) { if (tempList[i] >= 37.0) { console.log('Be careful!'); } }", "if (tempList[i] == 37.0) { ... }", "console.log('Be careful!');"], 
+  c: 1, 
+  h: "نحتاج لدورة تمر على العناصر وشرط يفحص كل عنصر" 
+},
+
+// --- السؤال 8: تتبع المخرجات الشرطية ---
+{ 
+  q: "كم مرة سيطبع الكود جملة 'Avoid going outside!'؟", 
+  code: "let tempList = [37.6, 36.5, 38.0];\nfor (let i = 0; i < 3; i++) {\n  if (tempList[i] >= 37.5) { console.log('Avoid going outside!'); }\n}", 
+  a: ["مرة واحدة", "مرتين", "3 مرات", "ولا مرة"], 
+  c: 1, 
+  h: "افحص كم عنصر في المصفوفة أكبر من أو يساوي 37.5" 
+},
+
+// --- السؤال 9: تتبع i في المصفوفة ---
+{ 
+  q: "ما ناتج تنفيذ الكود التالي؟", 
+  code: "let list = [10, 20, 30];\nfor (let i = 0; i < 3; i++) {\n  if (i == 1) { console.log(list[i]); }\n}", 
+  a: ["10", "20", "30", "1"], 
+  c: 1, 
+  h: "الشرط يتحقق عندما تكون i تساوي 1، فما هو العنصر رقم 1؟" 
+},
+
+// --- السؤال 10: خطأ في المصفوفة (Out of Bounds) ---
+{ 
+  q: "ما الناتج المتوقع عند محاولة الوصول لـ tempList[10] والمصفوفة تحتوي على 5 عناصر فقط؟", 
+  code: "let tempList = [36.0, 36.1, 36.2, 36.3, 36.4];\nconsole.log(tempList[10]);", 
+  a: ["0", "Error", "undefined", "36.4"], 
+  c: 2, 
+  h: "في الجافا سكريبت، الوصول لعنصر غير موجود يعطي 'غير محدد'" 
+},
+// --- السؤال 1: تتبع مخرجات الدورة ---
+{ 
+  q: "ما هو أول رقم سيتم طباعته في الكونسول؟", 
+  code: "let degreeList = [2, 1, 2, 1, 0];\nfor (let i = 0; i < 5; i++) {\n  console.log(degreeList[i]);\n}", 
+  a: ["0", "1", "2", "5"], 
+  c: 2, 
+  h: "الدورة تبدأ من i = 0، وهو العنصر الأول في المصفوفة" 
+},
+
+// --- السؤال 2: استخدام length في الدورة ---
+{ 
+  q: "ما الكود الصحيح لطباعة جميع عناصر المصفوفة مهما كان طولها؟", 
+  code: "let degreeList = [2, 1, 2, 1, 0, 1, 1];", 
+  a: ["for (let i = 0; i < 7; i++) { ... }", "for (let i = 0; i < degreeList.length; i++) { ... }", "for (let i = 0; i <= degreeList.length; i++) { ... }", "console.log(degreeList);"], 
+  c: 1, 
+  h: "استخدام .length يضمن المرور على جميع العناصر بشكل آلي" 
+},
+
+// --- السؤال 3: طريقة for...of للمصفوفات الرقمية ---
+{ 
+  q: "ما الناتج النهائي لهذا الكود؟", 
+  code: "let degreeList = [8, 6, 11];\nfor (let degree of degreeList) {\n  console.log(degree);\n}", 
+  a: ["0, 1, 2", "8, 6, 11", "11, 6, 8", "3"], 
+  c: 1, 
+  h: "for...of تمر مباشرة على قيم العناصر وليس أرقامها" 
+},
+
+// --- السؤال 4: for...of مع النصوص ---
+{ 
+  q: "ما هي الكلمة التي ستطبع في الدورة الثانية؟", 
+  code: "let wordList = ['apple', 'banana', 'orange'];\nfor (let word of wordList) {\n  console.log(word);\n}", 
+  a: ["apple", "orange", "banana", "word"], 
+  c: 2, 
+  h: "الدورة الثانية تأخذ العنصر الثاني في المصفوفة" 
+},
+
+// --- السؤال 5: الفرق بين i و degree ---
+{ 
+  q: "في الكود التالي، ماذا يمثل المتغير degree؟", 
+  code: "for (let degree of degreeList) { ... }", 
+  a: ["رقم مكان العنصر (Index)", "القيمة الفعلية للعنصر", "طول المصفوفة", "اسم المصفوفة"], 
+  c: 1, 
+  h: "في for...of، المتغير يمثل القيمة الموجودة داخل المصفوفة" 
+},
+
+// --- السؤال 6: البحث عن نص محدد داخل دورة ---
+{ 
+  q: "ما الكود الذي يطبع 'Found' إذا كانت كلمة 'apple' موجودة في المصفوفة؟", 
+  code: "let wordList = ['apple', 'banana', 'orange'];", 
+  a: ["if (wordList == 'apple') { ... }", "for (let w of wordList) { if (w == 'apple') { console.log('Found'); } }", "for (let i=0; i<3; i++) { console.log('Found'); }", "wordList.find('apple');"], 
+  c: 1, 
+  h: "نحتاج لدورة تفحص كل كلمة (w) وتقارنها بكلمة 'apple'" 
+},
+
+// --- السؤال 7: تتبع عدد الدورات ---
+{ 
+  q: "كم مرة سيتم تنفيذ console.log داخل هذه الدورة؟", 
+  code: "let list = [10, 20, 30, 40, 50];\nfor (let x of list) {\n  console.log(x);\n}", 
+  a: ["4 مرات", "5 مرات", "6 مرات", "مرة واحدة"], 
+  c: 1, 
+  h: "عدد مرات التنفيذ يساوي عدد العناصر الموجودة في المصفوفة" 
+},
+
+// --- السؤال 8: العمليات الحسابية مع for...of ---
+{ 
+  q: "ما هو ناتج جمع العناصر باستخدام for...of؟", 
+  code: "let nums = [1, 2, 3];\nlet total = 0;\nfor (let n of nums) { total += n; }\nconsole.log(total);", 
+  a: ["123", "3", "6", "0"], 
+  c: 2, 
+  h: "0 + 1 + 2 + 3 = 6" 
+},
+
+// --- السؤال 9: طباعة العناصر بترتيب معين ---
+{ 
+  q: "ما الكود الذي سيطبع الرقم 11 من المصفوفة التالية؟", 
+  code: "let degreeList = [8, 6, 11, 10];", 
+  a: ["console.log(degreeList[11]);", "console.log(degreeList[2]);", "for (let d of degreeList) { console.log(11); }", "degreeList[3];"], 
+  c: 1, 
+  h: "الرقم 11 يقع في الحانة رقم 2 (العد: 0, 1, 2)" 
+},
+
+// --- السؤال 10: مقارنة الطرق ---
+{ 
+  q: "أي من الطرق التالية أسهل لطباعة قيم المصفوفة دون استخدام عداد (i)؟", 
+  code: "// طرق التكرار", 
+  a: ["العد اليدوي", "for loop التقليدي", "for...of loop", "if condition"], 
+  c: 2, 
+  h: "طريقة for...of مصممة للتعامل مع القيم مباشرة دون الحاجة لعداد" 
+},
+// --- الجزء 1: الشروط المتعددة (If/Else if) ---
+
+{ 
+  q: "ما الناتج الذي سيطبع في الكونسول؟", 
+  code: "let score = 62;\nif (score == 100) {\n  console.log('steak');\n} else if (score >= 80) {\n  console.log('cake');\n} else {\n  console.log('No games');\n}", 
+  a: ["steak", "cake", "No games", "Error"], 
+  c: 2, 
+  h: "درجة 62 أقل من 80، لذا سيتم تنفيذ else" 
+},
+
+{ 
+  q: "إذا كانت درجة score هي 85، ما الناتج؟", 
+  code: "if (score == 100) { ... } else if (score >= 80) { console.log('cake'); }", 
+  a: ["steak", "cake", "No games", "undefined"], 
+  c: 1, 
+  h: "85 أكبر من 80، فيتحقق الشرط الثاني" 
+},
+
+// --- الجزء 2: العدادات (Counters) ---
+
+{ 
+  q: "ما هي القيمة النهائية لـ count؟", 
+  code: "let fish = 50, count = 0;\nif (fish >= 50) {\n  count = count + 1;\n}\nconsole.log(count);", 
+  a: ["0", "1", "50", "51"], 
+  c: 1, 
+  h: "بما أن fish تساوي 50، فإن الشرط صحيح ويزداد العداد بواحد" 
+},
+
+{ 
+  q: "ماذا سيطبع السطر الأخير في الكونسول؟", 
+  code: "let fish = 120, count = 0;\nif (fish >= 100) {\n  count = count + 1;\n  console.log('Super:' + count);\n}", 
+  a: ["Super:0", "Super:120", "Super:1", "Error"], 
+  c: 2, 
+  h: "الشرط محقق، العداد زاد من 0 إلى 1" 
+},
+
+{ 
+  q: "إذا كانت fish = 30، ما هي قيمة count بعد انتهاء الكود؟", 
+  code: "let count = 0;\nif (fish >= 50) { count = count + 1; }", 
+  a: ["1", "0", "30", "undefined"], 
+  c: 1, 
+  h: "30 أصغر من 50، لذا لن يتغير العداد" 
+},
+
+// --- الجزء 3: نصوص (Strings) وشروط بسيطة ---
+
+{ 
+  q: "ماذا سيطبع الكود؟", 
+  code: "let weather = 'sunny';\nif (weather == 'sunny') {\n  console.log('Picnic');\n} else {\n  console.log('Home');\n}", 
+  a: ["Picnic", "Home", "sunny", "Error"], 
+  c: 0, 
+  h: "المتغير يطابق النص 'sunny'" 
+},
+
+{ 
+  q: "إذا تغيرت weather إلى 'rainy'، ما الناتج؟", 
+  code: "if (weather == 'sunny') { ... } else { console.log('Home'); }", 
+  a: ["Picnic", "Home", "rainy", "لا شيء"], 
+  c: 1, 
+  h: "أي قيمة غير 'sunny' ستؤدي لتنفيذ else" 
+},
+
+// --- الجزء 4: الشروط المتداخلة (Nested If) ---
+
+{ 
+  q: "ما الناتج في الكونسول؟", 
+  code: "let weather = 'sunny', shop = 'CLOSED';\nif (weather == 'sunny') {\n  if (shop == 'OPEN') {\n    console.log('Bread');\n  } \n  console.log('Apple');\n}", 
+  a: ["Bread", "Apple", "Bread و Apple", "Error"], 
+  c: 1, 
+  h: "شرط المتجر مغلق، لذا سيتخطى Bread ويطبع Apple الموجودة بالخارج" 
+},
+
+{ 
+  q: "ما الناتج إذا كانت weather = 'sunny' و shop = 'OPEN'؟", 
+  code: "if (weather == 'sunny') {\n  if (shop == 'OPEN') { console.log('Bread'); }\n  console.log('Apple');\n}", 
+  a: ["Bread", "Apple", "Bread ثم Apple", "Bread فقط"], 
+  c: 2, 
+  h: "الشرط الداخلي سيتحقق، ثم يكمل الكود لطباعة الجملة التي تلي القوس" 
+},
+
+{ 
+  q: "ما الناتج؟", 
+  code: "let weather = 'sunny', group = 'Group A';\nif (weather == 'sunny') {\n  if (group == 'Group A') { console.log('Zoo'); }\n  else { console.log('Museum'); }\n}", 
+  a: ["Zoo", "Museum", "Field trip canceled", "Error"], 
+  c: 0, 
+  h: "الطقس مشمس والمجموعة A، لذا الوجهة هي حديقة الحيوان" 
+},
+
+{ 
+  q: "إذا كانت المجموعة Group B، ما الناتج؟", 
+  code: "if (group == 'Group A') { console.log('Zoo'); } else { console.log('Museum'); }", 
+  a: ["Zoo", "Museum", "Group B", "Canceled"], 
+  c: 1, 
+  h: "أي مجموعة غير A ستذهب للمتحف حسب الكود" 
+},
+
+{ 
+  q: "ما الناتج هنا؟", 
+  code: "let weather = 'rainy', group = 'Group A';\nif (weather == 'sunny') {\n  if (group == 'Group A') { console.log('Zoo'); }\n} else {\n  console.log('Canceled');\n}", 
+  a: ["Zoo", "Canceled", "Group A", "Error"], 
+  c: 1, 
+  h: "الطقس 'rainy' وليس 'sunny'، فيذهب مباشرة لـ else الخارجية" 
+},
+
+// --- الجزء 5: التفرعات المتعددة المتداخلة ---
+
+{ 
+  q: "ما الناتج النهائي لهذا الكود؟", 
+  code: "let weather = 'sunny', group = 'Group C';\nif (weather == 'sunny') {\n  if (group == 'Group A') { console.log('Zoo'); }\n  else if (group == 'Group B') { console.log('Museum'); }\n  else { console.log('Art Museum'); }\n}", 
+  a: ["Zoo", "Museum", "Art Museum", "Canceled"], 
+  c: 2, 
+  h: "بما أن المجموعة ليست A ولا B، سينفذ الخيار الأخير (else)" 
+},
+
+{ 
+  q: "إذا كانت المجموعة Group B، ما الناتج؟", 
+  code: "if (group == 'Group A') { ... } else if (group == 'Group B') { console.log('Museum'); }", 
+  a: ["Zoo", "Museum", "Art Museum", "Home"], 
+  c: 1, 
+  h: "سيتحقق شرط Else if الخاص بالمجموعة B" 
+},
+
+{ 
+  q: "ما ناتج الكود إذا كانت weather = 'cloudy'؟", 
+  code: "if (weather == 'sunny') { ... } else { console.log('Canceled'); }", 
+  a: ["Zoo", "Museum", "Art Museum", "Canceled"], 
+  c: 3, 
+  h: "عندما لا يكون الطقس sunny، لن ينظر الكود لأي مجموعة" 
+},
+
+// --- الجزء 6: مراجعة المنطق ---
+
+{ 
+  q: "ما الناتج؟", 
+  code: "let x = 10;\nif(x > 5) { x = x + 5; }\nif(x > 10) { x = x + 5; }\nconsole.log(x);", 
+  a: ["10", "15", "20", "5"], 
+  c: 2, 
+  h: "الشرط الأول سيتحقق فتصبح x=15، ثم الشرط الثاني سيتحقق فتصبح x=20" 
+},
+
+{ 
+  q: "ما الفرق بين (count = count + 1) و (count == 1)؟", 
+  code: "// لا يوجد كود", 
+  a: ["الأولى للمقارنة، الثانية للجمع", "الأولى للجمع والتعيين، الثانية للمقارنة", "كلاهما نفس الشيء", "خطأ برمي"], 
+  c: 1, 
+  h: "علامة = للتعيين، وعلامة == للمقارنة" 
+},
+
+{ 
+  q: "ما الناتج؟", 
+  code: "let weather = 'sunny';\nif (weather == 'Sunny') { console.log('Yes'); } else { console.log('No'); }", 
+  a: ["Yes", "No", "Error", "undefined"], 
+  c: 1, 
+  h: "جافاسكريبت حساسة لحالة الأحرف (S كبيرة تختلف عن s صغيرة)" 
+},
+
+{ 
+  q: "ما ناتج تنفيذ: let count=5; count=count+count;", 
+  code: "console.log(count);", 
+  a: ["5", "10", "25", "Error"], 
+  c: 1, 
+  h: "5 + 5 = 10" 
+},
+
+{ 
+  q: "ما هو الكود الصحيح لطباعة 'Success' إذا كان score بين 50 و 100؟", 
+  code: "let score = 75;", 
+  a: ["if(score > 50 || score < 100)", "if(score > 50 && score < 100)", "if(score == 50 && 100)", "if(50 < score > 100)"], 
+  c: 1, 
+  h: "نستخدم && للتأكد من أن كلا الشرطين صحيحين" 
+},
+// 1. HTML - هيكلة العناوين
+{ 
+  q: "أي وسم سيظهر النص بأصغر حجم خط؟", 
+  code: "<h1>Cody's Notepad</h1>\n<h3>Cody's Notepad</h3>\n<h6>Cody's Notepad</h6>", 
+  a: ["<h1>", "<h3>", "<h6>", "كلهم نفس الحجم"], 
+  c: 2, 
+  h: "كلما كبر الرقم بجانب حرف h، صغر حجم العنوان" 
+},
+
+// 2. CSS - الأولوية (Specificity)
+{ 
+  q: "ما هو اللون النهائي للفقرة (p) في المتصفح؟", 
+  code: "p { color: red; }\np { color: blue; }", 
+  a: ["أحمر", "أزرق", "أسود", "شفاف"], 
+  c: 1, 
+  h: "عند تكرار نفس الخاصية، المتصفح يأخذ القيمة الأخيرة المكتوبة" 
+},
+
+// 3. JS - المنطق (Logical AND)
+{ 
+  q: "ما هي نتيجة الشرط التالي؟", 
+  code: "let x = 10, y = 5;\nif (x > 5 && y == 10) { console.log('Yes'); }\nelse { console.log('No'); }", 
+  a: ["Yes", "No", "10", "Error"], 
+  c: 1, 
+  h: "علامة && تتطلب أن يكون الطرفان صحيحين معاً" 
+},
+
+// 4. JS - العدادات (Counters)
+{ 
+  q: "ما القيمة النهائية للمتغير count؟", 
+  code: "let count = 0;\nfor (let i = 0; i < 3; i++) {\n  count += 2;\n}", 
+  a: ["2", "3", "5", "6"], 
+  c: 3, 
+  h: "الحلقة ستعمل 3 مرات، وفي كل مرة نضيف 2 (2+2+2)" 
+},
+
+// 5. JS - الدوال (Functions)
+{ 
+  q: "ماذا سيخرج هذا الكود في الكونسول؟", 
+  code: "function sum(a, b) { return a + b; }\nconsole.log(sum(10, 20));", 
+  a: ["1020", "30", "sum(10,20)", "undefined"], 
+  c: 1, 
+  h: "الدالة تقوم بجمع المعاملين وإرجاع الناتج" 
+},
+
+// 6. JS - المصفوفات (Arrays)
+{ 
+  q: "ما الكود الصحيح للحصول على كلمة 'banana'؟", 
+  code: "let fruits = ['apple', 'banana', 'orange'];", 
+  a: ["fruits[0]", "fruits[1]", "fruits[2]", "fruits['banana']"], 
+  c: 1, 
+  h: "العد في المصفوفات يبدأ دائماً من الصفر" 
+},
+
+// 7. JS - الشروط المتداخلة (Nested If)
+{ 
+  q: "ما الناتج؟", 
+  code: "let temp = 38, weather = 'sunny';\nif (weather == 'sunny') {\n  if (temp > 40) { console.log('Hot'); }\n  else { console.log('Warm'); }\n}", 
+  a: ["Hot", "Warm", "sunny", "No output"], 
+  c: 1, 
+  h: "الطقس مشمس فعلاً، لكن درجة الحرارة 38 (ليست أكبر من 40)" 
+},
+
+// 8. JS - نطاق المتغيرات (Scope)
+{ 
+  q: "ما ناتج السطر الأخير في هذا الكود؟", 
+  code: "if (true) { let reward = 500; }\nconsole.log(reward);", 
+  a: ["500", "0", "ReferenceError (خطأ)", "undefined"], 
+  c: 2, 
+  h: "المتغير المعرف بـ let داخل القوسين لا يمكن الوصول إليه من الخارج" 
+}
+];
+    let currentIdx = 0;
+    let score = 0;
+    let attempts = 0; // لحساب المحاولات لكل سؤال
+    let seconds = 0;
+    let timerInt;
+    let sName = "";
+
+    function initQuiz() {
+        sName = document.getElementById('student-name').value;
+        if(!sName) return alert("من فضلك اكتب اسمك");
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('quiz-screen').style.display = 'block';
+        startTimer();
+        loadQuestion();
+    }
+
+    function startTimer() {
+        timerInt = setInterval(() => {
+            seconds++;
+            let m = Math.floor(seconds/60).toString().padStart(2,'0');
+            let s = (seconds%60).toString().padStart(2,'0');
+            document.getElementById('timer').innerText = `الزمن: ${m}:${s}`;
+        }, 1000);
+    }
+
+    function loadQuestion() {
+        attempts = 0;
+        const q = questions[currentIdx];
+        document.getElementById('q-progress').innerText = `السؤال: ${currentIdx + 1} / 30`;
+        document.getElementById('q-text').innerText = q.q;
+        document.getElementById('success-msg').innerText = "";
+        document.getElementById('hint-display').style.display = 'none';
+        
+        const codeBox = document.getElementById('q-code');
+        if(q.code) {
+            codeBox.innerText = q.code;
+            codeBox.style.display = 'block';
+        } else {
+            codeBox.style.display = 'none';
+        }
+
+        const area = document.getElementById('options-area');
+        area.innerHTML = '';
+        q.a.forEach((txt, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = txt;
+            btn.onclick = () => check(i, btn);
+            area.appendChild(btn);
+        });
+    }
+
+    function check(i, btn) {
+        const q = questions[currentIdx];
+        if(i === q.c) {
+            btn.classList.add('correct');
+            score += 10;
+            document.getElementById('success-msg').innerText = "رائع! إجابة صحيحة ✅";
+            disableOptions();
+            setTimeout(nextQ, 1200);
+        } else {
+            btn.classList.add('wrong');
+            attempts++;
+            if(attempts === 1) {
+                const h = document.getElementById('hint-display');
+                h.innerText = "💡 تلميح: " + q.h;
+                h.style.display = 'block';
+            } else {
+                // المحاولة الثانية خطأ -> انتقال للسؤال التالي
+                alert("للأسف، إجابة ثانية خاطئة. سننتقل للسؤال التالي.");
+                nextQ();
+            }
+        }
+    }
+
+    function disableOptions() {
+        const btns = document.querySelectorAll('.option-btn');
+        btns.forEach(b => b.disabled = true);
+    }
+
+    function forceReveal() {
+        if(confirm("تحذير: سيتم خصم درجتين ولن تستطيع تغيير الإجابة. هل موافق؟")) {
+            score -= 2;
+            alert("الإجابة الصحيحة هي: " + questions[currentIdx].a[questions[currentIdx].c]);
+            nextQ();
+        }
+    }
+
+    function nextQ() {
+        if(currentIdx < questions.length - 1) {
+            currentIdx++;
+            loadQuestion();
+        } else {
+            showResult();
+        }
+    }
+
+    function prevQ() {
+        if(currentIdx > 0) {
+            currentIdx--;
+            loadQuestion();
+        }
+    }
+
+    function skipQ() { nextQ(); }
+
+    function showResult() {
+        clearInterval(timerInt);
+        document.getElementById('quiz-screen').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        
+        const timeStr = document.getElementById('timer').innerText;
+        let phrase = score >= 250 ? "أنت عبقري برمجة مستقبلي! 🏆" : "أداء رائع.. استمر في التطور! 🚀";
+
+        document.getElementById('summary-data').innerHTML = `
+            <p><strong>اسم الطالب:</strong> ${sName}</p>
+            <p><strong>الدرجة النهائية:</strong> ${score} / 300</p>
+            <p><strong>${timeStr}</strong></p>
+        `;
+        document.getElementById('motivate').innerText = phrase;
+    }
+</script>
+
+</body>
+</html>
